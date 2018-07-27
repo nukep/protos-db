@@ -1,6 +1,17 @@
+# NOTE: Extremely unstable, work in progress
+
 # What's this?
 
-This is a filesystem-based database I quickly wrote to assist with iterative prototyping. This is intended as a holdover for projects that don't yet implement a "real" database.
+This is a filesystem-based database library I quickly wrote to assist with iterative prototyping. This is intended as a holdover for **Node.js** projects that don't yet implement a "real" database.
+
+## Types of databases
+
+There are so far two types of databases:
+
+* Blob database
+* Time Record database (table-oriented, append-only, indexed by timestamp)
+
+You should choose the database(s) that are most relevant to your use cases.
 
 ## Immutable, addressible data is stored as "Blobs"
 
@@ -8,8 +19,8 @@ Each blob is a gzip-compressed string that's addressable by its SHA1 hash.
 
 Why on earth would you want this?
 
-a) To avoid persisting the same data twice - save on hard drive space. This is desirable for sparse-yet-large data that you want to normalize.
-b) To compress file contents that contain lots of repetition, such as JSON.
+* a) To avoid persisting the same data twice - save on hard drive space. This is desirable for sparse-yet-large data that you want to normalize
+* b) To compress file contents that contain lots of repetition, such as JSON.
 
 Usage:
 
@@ -80,3 +91,30 @@ This is inspired by Git and CDNs that do the same.
 
 All records are indexed by calendar day.
 
+Usage:
+
+```js
+const { createRecordDb } = require('protos-db')
+
+// We must additionally supply a function to extract the ISO-8583 timestamp field.
+// All records in all tables must have a way to extract a ISO-8583 timestamp, e.g. a field.
+const recordDb = createRecordDb('./path/to/my-record-db', record => record.timestamp)
+
+// There's new information about Marge Simpson!
+recordDb.appendRecordToTable('marge-simpson-info', {
+  timestamp: "2018-07-27T09:56:22Z",
+  name: "Marge Simpson",
+  address: "123 Fake Street",
+  children: 3
+}).then(hash => {
+  console.log(`Appended record`)
+})
+
+// later on in your program...
+
+recordDb.readLatestRecord('marge-simpson-info').then(record => {
+  console.log(`Record: ${JSON.stringify(record)}`)
+})
+// => Prints "Record: {"timestamp":"2018-07-27T09:56:22Z","name":"Marge Simpson","address":"123 Fake Street","children":3}"
+
+```
