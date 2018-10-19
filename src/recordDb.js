@@ -75,6 +75,14 @@ function createRecordDb(recordPath, recordToTimestampFunction) {
     }
   }
 
+  async function getTableNames() {
+    if (!fileExists(recordPath)) {
+      return []
+    }
+    const names = await promisify(fs.readdir)(recordPath)
+    return names
+  }
+
   async function readLatestRecord(table) {
     const indexes = await getTableIndexes(table)
 
@@ -116,7 +124,7 @@ function createRecordDb(recordPath, recordToTimestampFunction) {
     await writeRecordIndex(table, index, json)
   }
 
-  return {readLatestRecord, readLatestRecordAsOf, appendRecordToTable}
+  return {getTableNames, readLatestRecord, readLatestRecordAsOf, appendRecordToTable}
 }
 
 module.exports = createRecordDb

@@ -106,7 +106,7 @@ recordDb.appendRecordToTable('marge-simpson-info', {
   name: "Marge Simpson",
   address: "123 Fake Street",
   children: 3
-}).then(hash => {
+}).then(() => {
   console.log(`Appended record`)
 })
 

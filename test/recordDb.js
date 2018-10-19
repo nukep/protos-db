@@ -6,7 +6,33 @@ chai.should()
 
 const createRecordDb = require('../src/recordDb')
 
-describe('recordDb', () => {
+describe('recordDb (no tables)', () => {
+  let recordDb
+
+  before(async () => {
+    const recordDbPath = path.resolve(__dirname, 'testing-record-db-empty')
+
+    // Removes directory and contents if it exists
+    await fs.remove(recordDbPath)
+
+    console.log(`Record DB path: ${recordDbPath}`)
+    recordDb = createRecordDb(recordDbPath, record => record.timestamp)
+  })
+
+  it('getTableNames', async () => {
+    const names = await recordDb.getTableNames()
+
+    expect(names).to.eql([])
+  })
+
+  it('reads null as latest record of nonexistent table', async () => {
+    const record = await recordDb.readLatestRecord('nonexistent')
+
+    expect(record).to.be.null
+  })
+})
+
+describe('recordDb (one table', () => {
   let recordDb
 
   before(async () => {
@@ -15,7 +41,7 @@ describe('recordDb', () => {
     // Removes directory and contents if it exists
     await fs.remove(recordDbPath)
 
-    console.log(`Blob DB path: ${recordDbPath}`)
+    console.log(`Record DB path: ${recordDbPath}`)
     recordDb = createRecordDb(recordDbPath, record => record.timestamp)
 
     await recordDb.appendRecordToTable('sampleTable', {
@@ -38,6 +64,12 @@ describe('recordDb', () => {
       timestamp: "2018-07-01T12:34:57Z",
       test: "456"
     })
+  })
+
+  it('getTableNames', async () => {
+    const names = await recordDb.getTableNames()
+
+    expect(names).to.eql(['sampleTable'])
   })
 
   it('reads null as latest record of nonexistent table', async () => {
