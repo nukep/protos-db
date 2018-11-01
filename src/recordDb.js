@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const mkdirp = require('mkdirp')
 const moment = require('moment')
+const createTableLock = require('./createTableLock')
 
 function fileExists(path) {
   try {
@@ -124,7 +125,24 @@ function createRecordDb(recordPath, recordToTimestampFunction) {
     await writeRecordIndex(table, index, json)
   }
 
-  return {getTableNames, readLatestRecord, readLatestRecordAsOf, appendRecordToTable}
+  async function updateLatestRecord(table, updateFn) {
+    const record = await readLatestRecord(table)
+    const newRecord = updateFn(record)
+    if (newRecord !== false) {
+      await appendRecordToTable(table, newRecord)
+    }
+    return newRecord
+  }
+
+  const { wrapLock } = createTableLock()
+
+  return {
+    getTableNames,
+    readLatestRecord: wrapLock(readLatestRecord),
+    readLatestRecordAsOf: wrapLock(readLatestRecordAsOf),
+    appendRecordToTable: wrapLock(appendRecordToTable),
+    updateLatestRecord: wrapLock(updateLatestRecord)
+  }
 }
 
 module.exports = createRecordDb

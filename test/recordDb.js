@@ -32,7 +32,7 @@ describe('recordDb (no tables)', () => {
   })
 })
 
-describe('recordDb (one table', () => {
+describe('recordDb', () => {
   let recordDb
 
   before(async () => {
@@ -103,6 +103,41 @@ describe('recordDb (one table', () => {
       return
     }
     throw new Error("Should have thrown an exception")
+  })
+
+
+  it('updateLatestRecord updates latest record', async () => {
+    await recordDb.appendRecordToTable('table2', {
+      timestamp: "2018-07-01T12:34:56Z",
+      test: "123"
+    })
+    await recordDb.updateLatestRecord('table2', (record) => {
+      return {
+        ...record,
+        timestamp: "2018-07-04T12:34:57Z",
+      }
+    })
+
+    const record = await recordDb.readLatestRecord('table2')
+    record.should.eql({
+      timestamp: "2018-07-04T12:34:57Z",
+      test: "123"
+    })
+  })
+
+  it('updateLatestRecord still works when no records exist', async () => {
+    const result = await recordDb.updateLatestRecord('table3', (record) => {
+      expect(record).to.eql(null)
+
+      return {
+        timestamp: "2018-07-04T12:34:57Z",
+      }
+    })
+
+    const record = await recordDb.readLatestRecord('table3')
+    record.should.eql({
+      timestamp: "2018-07-04T12:34:57Z",
+    })
   })
 
   it('readLatestRecord gets the latest', async () => {
