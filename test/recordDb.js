@@ -111,11 +111,16 @@ describe('recordDb', () => {
       timestamp: "2018-07-01T12:34:56Z",
       test: "123"
     })
-    await recordDb.updateLatestRecord('table2', (record) => {
+    const result = await recordDb.updateLatestRecord('table2', (record) => {
       return {
         ...record,
         timestamp: "2018-07-04T12:34:57Z",
       }
+    })
+
+    result.should.eql({
+      timestamp: "2018-07-04T12:34:57Z",
+      test: "123"
     })
 
     const record = await recordDb.readLatestRecord('table2')
@@ -134,9 +139,31 @@ describe('recordDb', () => {
       }
     })
 
+    result.should.eql({
+      timestamp: "2018-07-04T12:34:57Z"
+    })
+
     const record = await recordDb.readLatestRecord('table3')
     record.should.eql({
       timestamp: "2018-07-04T12:34:57Z",
+    })
+  })
+
+  it('updateLatestRecord doesn\'t update when result is false', async () => {
+    await recordDb.appendRecordToTable('table4', {
+      timestamp: "2018-07-01T12:34:56Z",
+      test: "123"
+    })
+    const result = await recordDb.updateLatestRecord('table4', (record) => {
+      return false
+    })
+
+    result.should.eql(false)
+
+    const record = await recordDb.readLatestRecord('table4')
+    record.should.eql({
+      timestamp: "2018-07-01T12:34:56Z",
+      test: "123"
     })
   })
 

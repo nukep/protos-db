@@ -39,6 +39,36 @@ describe('createTableLock', () => {
     ])
   })
 
+  it('unlocks the table if an exception is thrown', async function() {
+    const {f, getBuffer} = tester(out => async (table, a, b, c) => {
+      out(`${table} - ${a} ${b} ${c} - before`)
+
+      if (a === 1) {
+        throw new Error("Test exception")
+      }
+
+      out(`${table} - ${a} ${b} ${c} - after`)
+    })
+
+    await Promise.all([
+      // Swallow the exception
+      f('mytable', 1, 2, 4).then(x => {
+        // should not be reachable
+        throw new Error("unreachable")
+      }).catch(e => {
+        expect(e.message).to.eql("Test exception")
+      }),
+
+      f('mytable', 2, 4, 8),
+    ])
+
+    expect(getBuffer()).to.eql([
+      "mytable - 1 2 4 - before",
+      "mytable - 2 4 8 - before",
+      "mytable - 2 4 8 - after",
+    ])
+  })
+
   it('locks the table for given table names', async function() {
     // This test takes up to about 2 seconds to finish. Give it extra time.
     this.timeout(5000)
