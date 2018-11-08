@@ -32,6 +32,114 @@ describe('recordDb (no tables)', () => {
   })
 })
 
+describe('recordDb (getLatestRecordOfAllTables)', () => {
+  let recordDb
+
+  before(async () => {
+    const recordDbPath = path.resolve(__dirname, 'testing-record-db-getLatestRecordOfAllTables')
+
+    // Removes directory and contents if it exists
+    await fs.remove(recordDbPath)
+
+    console.log(`Record DB path: ${recordDbPath}`)
+    recordDb = createRecordDb(recordDbPath, record => record.timestamp)
+    await recordDb.appendRecordToTable('sampleTable', {
+      timestamp: "2018-06-15T00:11:06Z",
+      test: "789"
+    })
+    await recordDb.appendRecordToTable('sampleTable', {
+      timestamp: "2018-06-16T00:11:06Z",
+      test: "123"
+    })
+    await recordDb.appendRecordToTable('sampleTable2', {
+      timestamp: "2018-11-08T00:11:06Z",
+      foo: "bar"
+    })
+  })
+
+  it('works', async () => {
+    const tableRecords = await recordDb.getLatestRecordOfAllTables()
+    expect(tableRecords).to.eql({
+      sampleTable:  { timestamp: '2018-06-16T00:11:06Z', test: '123' },
+      sampleTable2: { timestamp: '2018-11-08T00:11:06Z', foo: 'bar' }
+    })
+  })
+})
+
+describe('recordDb (onAppend)', () => {
+  let recordDb
+  let onAppendCalls
+
+  before(async () => {
+    const recordDbPath = path.resolve(__dirname, 'testing-record-db-onappend')
+
+    // Removes directory and contents if it exists
+    await fs.remove(recordDbPath)
+
+    onAppend = (record) => {
+      onAppendCalls.push(record)
+    }
+
+    console.log(`Record DB path: ${recordDbPath}`)
+    recordDb = createRecordDb(recordDbPath, record => record.timestamp, {
+      onAppend
+    })
+  })
+
+  beforeEach(() => {
+    onAppendCalls = []
+  })
+
+  it('notifies on appendRecordToTable', async () => {
+    await recordDb.appendRecordToTable('myTable', {
+      timestamp: "2018-06-15T00:11:06Z",
+      test: "123"
+    })
+    expect(onAppendCalls).to.eql([{
+      table: "myTable",
+      record: {
+        timestamp: "2018-06-15T00:11:06Z",
+        test: "123"
+      }
+    }])
+  })
+
+  it('notifies on updateLatestRecord', async () => {
+    await recordDb.updateLatestRecord('myTable2', (record) => {
+      return {
+        timestamp: "2018-06-15T00:11:06Z",
+        test: "456"
+      }
+    })
+    // A second update to make sure onAppend notifies with the final record
+    await recordDb.updateLatestRecord('myTable2', (record) => {
+      return {
+        ...record,
+        timestamp: "2018-06-16T00:11:06Z",
+      }
+    })
+
+    expect(onAppendCalls).to.eql([{
+      table: "myTable2",
+      record: {
+        timestamp: "2018-06-15T00:11:06Z",
+        test: "456"
+      }
+    }, {
+      table: "myTable2",
+      record: {
+        timestamp: "2018-06-16T00:11:06Z",
+        test: "456"
+      }
+    }])
+  })
+
+  it('does not notify on updateLatestRecord when it returns false', async () => {
+    await recordDb.updateLatestRecord('myTable', (record) => false)
+    expect(onAppendCalls).to.eql([])
+  })
+})
+
 describe('recordDb', () => {
   let recordDb
 

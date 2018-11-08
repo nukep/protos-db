@@ -35,7 +35,9 @@ function iso8601TimestampLessThanOrEqual(a, b) {
   return diff <= 0
 }
 
-function createRecordDb(recordPath, recordToTimestampFunction) {
+// onAppend accepts an object with the fields "table" and "record".
+// * onAppend :: ({ table, record })
+function createRecordDb(recordPath, recordToTimestampFunction, { onAppend=null }={}) {
   function getTablePath(table) {
     return path.resolve(recordPath, table,)
   }
@@ -122,6 +124,9 @@ function createRecordDb(recordPath, recordToTimestampFunction) {
     const index = iso8601TimestampToIndex(timestamp)
     const json = await readRecordIndex(table, index)
     json.push(record)
+    if (onAppend) {
+      onAppend({table, record})
+    }
     await writeRecordIndex(table, index, json)
   }
 
@@ -134,10 +139,26 @@ function createRecordDb(recordPath, recordToTimestampFunction) {
     return newRecord
   }
 
+  // Returns a map of table name -> record
+  // Note: This function locks tables!
+  async function getLatestRecordOfAllTables() {
+    const tableNames = await getTableNames()
+
+    const latestRecords = {}
+
+    await Promise.all(tableNames.map(async tableName => {
+      const record = await (wrapLock(readLatestRecord))(tableName)
+      latestRecords[tableName] = record
+    }))
+
+    return latestRecords
+  }
+
   const { wrapLock } = createTableLock()
 
   return {
     getTableNames,
+    getLatestRecordOfAllTables,
     readLatestRecord: wrapLock(readLatestRecord),
     readLatestRecordAsOf: wrapLock(readLatestRecordAsOf),
     appendRecordToTable: wrapLock(appendRecordToTable),
