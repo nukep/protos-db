@@ -1,7 +1,5 @@
-const { promisify } = require('util')
-const fs = require('fs')
+const fs = require('fs-extra')
 const path = require('path')
-const mkdirp = require('mkdirp')
 const moment = require('moment')
 const createTableLock = require('./createTableLock')
 
@@ -49,7 +47,7 @@ function createRecordDb(recordPath, recordToTimestampFunction, { onAppend=null }
   async function readRecordIndex(table, index) {
     const recordIndexPath = getRecordIndexPath(table, index)
     if (fileExists(recordIndexPath)) {
-      const json = await promisify(fs.readFile)(recordIndexPath, "utf8")
+      const json = await fs.readFile(recordIndexPath, "utf8")
       return JSON.parse(json)
     } else {
       return []
@@ -60,14 +58,14 @@ function createRecordDb(recordPath, recordToTimestampFunction, { onAppend=null }
     const recordIndexPath = getRecordIndexPath(table, index)
     const s = JSON.stringify(json, null, 2)
     const dirname = path.dirname(recordIndexPath)
-    await promisify(mkdirp)(dirname)
-    await promisify(fs.writeFile)(recordIndexPath, s, "utf8")
+    await fs.ensureDir(dirname)
+    await fs.writeFile(recordIndexPath, s, "utf8")
   }
 
   async function getTableIndexes(table) {
     const tablePath = getTablePath(table)
     if (fileExists(tablePath)) {
-      const files = await promisify(fs.readdir)(tablePath)
+      const files = await fs.readdir(tablePath)
       return files.map(fileName => {
         const m = /^(.*)\.json$/.exec(fileName)
         if (m == null) return null
@@ -82,7 +80,7 @@ function createRecordDb(recordPath, recordToTimestampFunction, { onAppend=null }
     if (!fileExists(recordPath)) {
       return []
     }
-    const names = await promisify(fs.readdir)(recordPath)
+    const names = await fs.readdir(recordPath)
     return names
   }
 

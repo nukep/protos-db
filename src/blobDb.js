@@ -3,7 +3,6 @@ const fs = require('fs-extra')
 const zlib = require('zlib')
 const crypto = require('crypto')
 const path = require('path')
-const mkdirp = require('mkdirp')
 
 // Data is a string
 function digestSha1(data) {
@@ -39,7 +38,7 @@ function createBlobDb(blobsPath) {
     if (!fileExists(blobPath)) {
       // Write if it doesn't exist
       const dirname = path.dirname(blobPath)
-      await promisify(mkdirp)(dirname)
+      await fs.ensureDir(dirname)
 
       const gzippedBuffer = await promisify(zlib.gzip)(data, "utf8")
       await fs.writeFile(blobPath, gzippedBuffer)
